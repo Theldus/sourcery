@@ -1,0 +1,3 @@
+[submodule "dict/wordlist/gen/mph"]
+	path = dict/wordlist/gen/mph
+	url = https://github.com/Theldus/mph
