@@ -21,71 +21,48 @@
 # SOFTWARE.
 
 #===================================================================
-# Paths
-#===================================================================
-
-INCLUDE = $(CURDIR)/include/
-SRC     = $(CURDIR)/
-
-#===================================================================
 # Flags
 #===================================================================
 
 CC      ?= gcc
-CFLAGS  += -Wall -Wextra -O3
-CFLAGS  += -I $(INCLUDE) -std=c99 -pedantic
-
-#
-# Spell checkers currently available:
-# - aspell
-# - wordlist
-#
-# Aspell do not need explanations.
-#
-# Wordlist is a hand-made spell checker that uses minimal perfect
-# hashing to reduce the lookup times. It's wordlist have a fairly
-# amount of words (124k) extracted directly from aspell:
-#     aspell -d en dump master | aspell -l en expand > words.txt
-# and preprocessed later (lowercase, sort, remove duplicates).
-#
-# Wordlist also have a great performance (up to 2x faster than
-# Aspell) and do not requires any dependencies.
-#
-DICT ?= aspell
-
-ifeq ($(DICT), aspell)
-	LDFLAGS += -laspell
-endif
+CFLAGS  += -Wall -Wextra -std=c99 -pedantic -O2
+SRC      = $(wildcard *.c)
+OBJ      = $(SRC:.c=.o)
+WL_DIR   = $(abspath $(CURDIR)/../)
 
 #===================================================================
 # Rules
 #===================================================================
 
-# Sources
-C_SRC = $(wildcard $(SRC)/dict/$(DICT)/*.c) \
-		$(wildcard $(SRC)/*.c)
-
-# Objects
-OBJ = $(C_SRC:.c=.o)
-
 # Build objects rule
 %.o: %.c
-	$(CC) $< $(CFLAGS) -c -o $@
+	$(CC) $< $(CFLAGS) -c
 
-# All
-all: spell
+# Build gen
+all: $(WL_DIR)/wordlist.c $(WL_DIR)/hash_wordlist.c
+	$(info $(^F) generated with success!)
 
-# Main program
-spell: $(OBJ)
-	$(CC) $^ $(CFLAGS) $(LDFLAGS) -o $@
+# Generate wordlist.c
+gen: $(OBJ)
+	$(CC) $(CFLAGS) $^ -o $@
 
-# Generate wordlist.c and hash_wordlist.c
-gen:
-	$(MAKE) -C dict/wordlist/gen/ all
+# Generate hash_wordlist.c
+mph/mph:
+	git submodule update --init
+	$(MAKE) -C mph/
 
-# General
+.tmp_wordlist.txt: wordlist.txt
+	@cat "wordlist.txt" | tr '[:upper:]' '[:lower:]' | sort |\
+		sort -u > .tmp_wordlist.txt
+
+$(WL_DIR)/wordlist.c: .tmp_wordlist.txt gen
+	@./gen .tmp_wordlist.txt > $(WL_DIR)/wordlist.c
+
+$(WL_DIR)/hash_wordlist.c: .tmp_wordlist.txt mph/mph
+	@./mph/mph < .tmp_wordlist.txt | ./mph/emitc -nlsi > $(WL_DIR)/hash_wordlist.c
+
+# Clean
 clean:
-	rm -f $(SRC)/*.o
-	rm -f $(SRC)/spell
-	rm -f $(SRC)/dict/$(DICT)/*.o
-	$(MAKE) -C dict/wordlist/gen/ clean
+	@rm -f *.o
+	@rm -f gen
+	@rm -f .tmp_wordlist.txt

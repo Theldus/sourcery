@@ -23,3 +23,5 @@
 # Default rules.
 *.o
 spell
+dict/wordlist/gen/.tmp_wordlist.txt
+dict/wordlist/gen/gen
