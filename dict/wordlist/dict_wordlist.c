@@ -23,6 +23,7 @@
  */
 
 #include "spell.h"
+#include "dict_wordlist.h"
 #include <strings.h>
 
 /* External functions and variables. */
@@ -31,11 +32,6 @@ extern struct words {
 	const char *w;
 	int len;
 } words_tbl[];
-
-/* Line variables. */
-static const char *line_start;
-static const char *line_end;
-static const char *buf;
 
 /**
  * @brief Check if a given key @p k of length @P l
@@ -101,22 +97,40 @@ static const char* next_word(const char **start, const char *end)
 }
 
 /**
- * @brief Initializes Aspell dictionary
+ * @brief Initializes Wordlist dictionary
  *
- * @return Returns if success, -1 otherwise.
+ * @return Returns 0 if success, -1 otherwise.
  */
-int dict_init(void)
+int dict_init(void){return (0);}
+
+/**
+ * @brief Finishes all the data structures from Wordlist.
+ *
+ * @return Returns always 0.
+ */
+int dict_finish(void){return (0);}
+
+/**
+ * @brief Initializes the checker for Wordlist dictionary
+ *
+ * @return Returns 0 if success, -1 otherwise.
+ */
+int dict_checker_init(struct dict_data *d)
 {
+	d->line_start = 0;
+	d->line_end   = 0;
+	d->buf        = 0;
 	return (0);
 }
 
 /**
- * @brief Finishes all the data structures from Aspell.
+ * @brief Finishes the checker from Wordlist.
  *
  * @return Returns always 0.
  */
-int dict_finish(void)
+int dict_checker_finish(struct dict_data *d)
 {
+	((void)d);
 	return (0);
 }
 
@@ -147,11 +161,11 @@ int dict_check_word(const char *str, int size)
  * @note In order to check misspellings on lines, this function
  * *must* be called _before_ dict_next_misspelling().
  */
-int dict_check_line(const char *line, int size)
+int dict_check_line(struct dict_data *d, const char *line, int size)
 {
-	line_start = line;
-	line_end   = line + size;
-	buf        = line;
+	d->line_start = line;
+	d->line_end   = line + size;
+	d->buf        = line;
 	return (0);
 }
 
@@ -168,18 +182,18 @@ int dict_check_line(const char *line, int size)
  * @note This function should be called only *after* a single
  * call the dict_check_line().
  */
-int dict_next_misspelling(unsigned *len, unsigned *off)
+int dict_next_misspelling(struct dict_data *d, unsigned *len, unsigned *off)
 {
 	const char *p; /* Word pointer. */
 	int size;      /* Word size.    */
 
-	while ((p = next_word(&buf, line_end)) < line_end)
+	while ((p = next_word(&d->buf, d->line_end)) < d->line_end)
 	{
-		size  = (int)LENGTH_PTR(buf - 1, p);
+		size  = (int)LENGTH_PTR(d->buf - 1, p);
 		if (dict_check_word(p, size) == 0)
 		{
 			*len = size;
-			*off = ((unsigned)LENGTH_PTR(p, line_start)) - 1;
+			*off = ((unsigned)LENGTH_PTR(p, d->line_start)) - 1;
 			return (1);
 		}
 	}

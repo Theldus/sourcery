@@ -49,11 +49,6 @@
 #		define INLINE inline
 #	endif
 
-	/* Report misspelling. */
-	#define REPORT(type, c_line, st_col, w_size, word) \
-		printf("%s:%d:%d: %s (%.*s) may be wrong\n", (curr_file), (c_line), \
-			(st_col), (type), (w_size), (word));
-
 	/* Panic that goto to a position for clean up. */
 	#define PANIC_GOTO(label, str, ...) \
 		do {\
@@ -73,7 +68,10 @@
 		(((ptrdiff_t)((e) - (s)))+1)
 
 	/* Max FDS for usage on nftw(). */
-	#define MAX_FDS 15
+	#define MAX_FDS 7
+
+	/* Num max worker threads. */
+	#define NUM_WORKERS 8
 
 	/**
 	 * Checks if the given character belongs to a valid identifier
@@ -88,13 +86,6 @@
 	{
 		return (isalnum(c) || c == '_');
 	}
-
-	/* Speller/Dictionary. */
-	extern int dict_init(void);
-	extern int dict_finish(void);
-	extern int dict_check_word(const char *str, int size);
-	extern int dict_check_line(const char *line, int size);
-	extern int dict_next_misspelling(unsigned *len, unsigned *off);
 
 	/* Our keyword table. */
 	extern const char * const keywords_tbl[];

@@ -24,16 +24,17 @@
 # Paths
 #===================================================================
 
-INCLUDE = $(CURDIR)/include/
+INCLUDE = $(CURDIR)/include/ -I $(CURDIR)/dict/
 SRC     = $(CURDIR)/
 
 #===================================================================
 # Flags
 #===================================================================
 
-CC      ?= gcc
-CFLAGS  += -Wall -Wextra -O3
-CFLAGS  += -I $(INCLUDE) -std=c99 -pedantic
+CC          ?= gcc
+CFLAGS      += -Wall -Wextra -O3
+CFLAGS      += -I $(INCLUDE) -std=c99 -pedantic
+USE_PTHREAD ?= yes
 
 #
 # Spell checkers currently available:
@@ -54,7 +55,15 @@ CFLAGS  += -I $(INCLUDE) -std=c99 -pedantic
 DICT ?= aspell
 
 ifeq ($(DICT), aspell)
+	CFLAGS  += -DDICT_ASPELL -DNOT_PTHREADS
 	LDFLAGS += -laspell
+else
+	CFLAGS  += -DDICT_WORDLIST
+	ifeq ($(USE_PTHREAD), yes)
+		LDFLAGS += -pthread
+	else
+		CFLAGS += -DNOT_PTHREADS
+	endif
 endif
 
 #===================================================================

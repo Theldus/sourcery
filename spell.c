@@ -23,6 +23,12 @@
  */
 
 #include "spell.h"
+#include "dict.h"
+#include "array.h"
+
+#ifndef NOT_PTHREADS
+#include <pthread.h>
+#endif
 
 #define OPTPARSE_IMPLEMENTATION
 #define OPTPARSE_API static
@@ -45,24 +51,108 @@
 #define CMD_ENABLE_ID 8 /* Enable identifiers. */
 #define CMD_DISABLE  16 /* Disable checking.   */
 
+/* Spell types. */
+#define SPELL_STR   0 /* String spell.              */
+#define SPELL_IDENT 1 /* Identifier spell.          */
+#define SPELL_SLINE 2 /* Single-line comment spell. */
+#define SPELL_MLINE 3 /* Multi-line comment spell.  */
+
+/* Types. */
+const char * const misspell_types[] = {
+	"string", "identifier", "single-line comment",
+	"multi-line comment"
+};
+
 /* Current flags. */
 static int cmd_flags;
 static struct optparse options;
 
-/* Current file. */
-static const char *curr_file;
+/* Mutexes. */
+#ifndef NOT_PTHREADS
+static pthread_mutex_t queue_mutex  = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t stdout_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t file_avail    = PTHREAD_COND_INITIALIZER;
+static pthread_t workers[NUM_WORKERS];
+static int done;
+static int nworkers;
 
-/* Line control. */
-static unsigned curr_line;
-static unsigned curr_coll;
-
-/* Global state. */
-static struct global_state
+/* File queue. */
+struct file_queue
 {
-	int state;
-} gs = {
-	.state = HL_DEFAULT
+	char *path;
+	struct file_queue *next;
 };
+
+/* File queue. */
+struct file_queue *file_queue;
+#endif
+
+/* Misspell word. */
+struct misspell
+{
+	unsigned type;
+	unsigned line;
+	unsigned col;
+	unsigned len;
+	char *word;
+};
+
+/**
+ * @brief Add a single word misspelling into the misspellings
+ * list.
+ *
+ * @param mslist Misspellings list.
+ * @param type Misspelling type (string, comment...).
+ * @param lineno Line number.
+ * @param linecol Line column.
+ * @param length Word length.
+ * @param word Word pointer.
+ *
+ * @return Returns 0 if success and -1 otherwise.
+ */
+static int add_misspelling(struct array *mslist,
+	unsigned type,
+	unsigned lineno,
+	unsigned linecol,
+	unsigned length,
+	char *word)
+{
+	struct misspell *s;
+	if ((s = malloc(sizeof(struct misspell))) == NULL)
+		return (-1);
+
+	s->type = type;
+	s->line = lineno;
+	s->col  = linecol;
+	s->len  = length;
+	s->word = word;
+
+	array_add(&mslist, s);
+	return (0);
+}
+
+/**
+ * @brief For the current misspellings list @p mslist,
+ * prints all of them in the stdout.
+ *
+ * @param file Processed file.
+ * @param mslist Misspellings list.
+ */
+static void dump_misspellings(const char *file,
+	struct array *mslist)
+{
+	size_t i;
+	size_t size;
+	struct misspell *m;
+
+	size = array_size(&mslist);
+	for (i = 0; i < size; i++)
+	{
+		m = array_get(&mslist, i, NULL);
+		printf("%s:%d:%d: %s (%.*s) may be wrong\n", file, m->line,
+			m->col, misspell_types[m->type], m->len, m->word);
+	}
+}
 
 /**
  * @brief Advances the buffer pointer until find
@@ -84,6 +174,8 @@ static inline void skip_line(char **buf, char *end)
  * @brief Searches for misspellings given a string that spans
  * through multiples lines.
  *
+ * @param d Dictionary saved data.
+ * @param mslist Misspellings list.
  * @param lineno Line that starts the string.
  * @param colno Column that starts the string.
  * @param start Start position of the buffer (inclusive).
@@ -91,7 +183,9 @@ static inline void skip_line(char **buf, char *end)
  *
  * @return Returns 0 if success, a negative number otherwise.
  */
-static int handle_multiline(unsigned lineno,
+static int handle_multiline(struct dict_data *d,
+	struct array *mslist,
+	unsigned lineno,
 	unsigned linecol,
 	char *start,
 	char *end)
@@ -118,11 +212,11 @@ static int handle_multiline(unsigned lineno,
 		l_size = (unsigned)LENGTH_PTR(l_end, start);
 
 		/* Initialize the checker. */
-		dict_check_line(start, l_size);
+		dict_check_line(d, start, l_size);
 
-		while (dict_next_misspelling(&w_size, &off))
-			REPORT("multi-line comment", l_count, s_col + off, w_size,
-				start + off);
+		while (dict_next_misspelling(d, &w_size, &off))
+			add_misspelling(mslist, SPELL_MLINE, l_count, s_col + off,
+				w_size, start + off);
 
 		rem_bytes -= l_size;
 		start      = l_end+1;
@@ -137,6 +231,8 @@ static int handle_multiline(unsigned lineno,
 /**
  * @brief Searches for misspellings on a single line.
  *
+ * @param d Dictionary saved data.
+ * @param mslist Misspellings list.
  * @param type Line type: comment, string or identifier.
  * @param lineno Line that starts the string.
  * @param linecol Column that starts the string.
@@ -145,7 +241,9 @@ static int handle_multiline(unsigned lineno,
  *
  * @return Returns 0 if success, a negative number otherwise.
  */
-static int handle_line(const char *type,
+static int handle_line(struct dict_data *d,
+	struct array *mslist,
+	unsigned type,
 	unsigned lineno,
 	unsigned linecol,
 	char *start,
@@ -158,11 +256,12 @@ static int handle_line(const char *type,
 	l_size = (unsigned)LENGTH_PTR(end, start);
 
 	/* Initialize the checker. */
-	dict_check_line(start, l_size);
+	dict_check_line(d, start, l_size);
 
 	/* Check for misspellings. */
-	while (dict_next_misspelling(&w_size, &off))
-		REPORT(type, lineno, linecol + off, w_size, start + off);
+	while (dict_next_misspelling(d, &w_size, &off))
+		add_misspelling(mslist, type, lineno, linecol + off, w_size,
+			start + off);
 
 	return (0);
 }
@@ -173,20 +272,30 @@ static int handle_line(const char *type,
  * @param file File to be analyzed.
  *
  * @note Note that this function is not thread-safe.
+ *
+ * @return Returns 0 if success, -1 if error.
  */
 static int spell_file(const char *file)
 {
-	char *fbuf, *buf, *endbuf; /* File buffers.                      */
-	unsigned saved_lineno;     /* Line number from last operation.   */
-	unsigned saved_colno;      /* Column number from last operation. */
-	char *keyword_start;       /* Pointer that points to the start of a
-	                              identifier, string, comment.       */
-	long fz;                   /* File size.                         */
-	FILE *f;                   /* File.                              */
-	int ret = -1;              /* Return value.                      */
+	unsigned saved_lineno;  /* Line number from last operation.   */
+	unsigned saved_colno;   /* Column number from last operation. */
+	struct array *mslist;   /* Misspellings list.                 */
+	char *keyword_start;    /* Keyword start pointer.             */
+	struct dict_data d;     /* Dictionary data.                   */
+	unsigned curr_line;     /* Current line.                      */
+	unsigned curr_coll;     /* Current column.                    */
+	char *endbuf;           /* End buffer marker.                 */
+	char *fbuf;             /* Start buffer marker.               */
+	char *buf;              /* Current buffer position.           */
+	int state;              /* Current state.                     */
+	size_t i;               /* Loop index.                        */
+	long fz;                /* File size.                         */
+	FILE *f;                /* File.                              */
+	int ret;                /* Return value.                      */
 
-	f = fopen(file, "r");
-	if (f == NULL)
+	ret = -1;
+
+	if ((f = fopen(file, "r")) == NULL)
 		PANIC_GOTO(close0, "Error: cannot open file: %s\n", file);
 
 	/* Seek to the end of the file */
@@ -207,9 +316,12 @@ static int spell_file(const char *file)
 		PANIC_GOTO(close2, "Error: cannot read %lu bytes of file\n", fz);
 	fbuf[fz] = '\0';
 
+	/* Misspell list. */
+	if (array_init(&mslist))
+		PANIC_GOTO(close2, "Unable to create spell list, file: %s\n", file);
+
 	/* Setup buffers and clear everything. */
-	gs.state      = HL_DEFAULT;
-	curr_file     = file;
+	state         = HL_DEFAULT;
 	keyword_start = NULL;
 	buf           = fbuf;
 	endbuf        = fbuf + fz;
@@ -217,6 +329,8 @@ static int spell_file(const char *file)
 	curr_coll     = 0;
 	saved_lineno  = 0;
 	saved_colno   = 0;
+
+	dict_checker_init(&d);
 
 	/*
 	 * Iterate char by char and when encounters one of
@@ -233,7 +347,7 @@ static int spell_file(const char *file)
 		else
 			curr_coll++;
 
-		switch (gs.state)
+		switch (state)
 		{
 			/* Default state. */
 			case HL_DEFAULT:
@@ -249,7 +363,7 @@ static int spell_file(const char *file)
 					saved_lineno = curr_line;
 					saved_colno  = curr_coll;
 					keyword_start = buf;
-					gs.state = HL_IDENTIFIER;
+					state = HL_IDENTIFIER;
 				}
 
 				/*
@@ -264,7 +378,7 @@ static int spell_file(const char *file)
 				 * identifier if not handled as part of number.
 				 */
 				else if (isdigit(*buf))
-					gs.state = HL_NUMBER;
+					state = HL_NUMBER;
 
 				/*
 				 * If potential char.
@@ -274,7 +388,7 @@ static int spell_file(const char *file)
 				 * as identifier too.
 				 */
 				else if (*buf == '\'')
-					gs.state = HL_CHAR;
+					state = HL_CHAR;
 
 				/* If potential string. */
 				else if (*buf == '"')
@@ -282,7 +396,7 @@ static int spell_file(const char *file)
 					saved_lineno  =  curr_line;
 					saved_colno   = (curr_coll + 1);
 					keyword_start = (buf + 1);
-					gs.state = HL_STRING;
+					state = HL_STRING;
 				}
 
 				/* Line or multi-line comment. */
@@ -291,7 +405,7 @@ static int spell_file(const char *file)
 					/* If one of them. */
 					if (*(buf + 1) == '/' && buf+2 < endbuf && isgraph(*(buf + 2)))
 					{
-						gs.state = HL_COMMENT_SINGLE;
+						state = HL_COMMENT_SINGLE;
 						buf++;
 						curr_coll++;
 						keyword_start = (buf + 1);
@@ -302,7 +416,7 @@ static int spell_file(const char *file)
 					/* Multi-line comments should be handled as usual. */
 					else if (*(buf+1) == '*')
 					{
-						gs.state = HL_COMMENT_MULTI;
+						state = HL_COMMENT_MULTI;
 						buf++;
 						curr_coll++;
 						keyword_start = (buf + 1);
@@ -315,7 +429,7 @@ static int spell_file(const char *file)
 				else if (*buf == '#')
 				{
 					keyword_start = buf;
-					gs.state = HL_PREPROCESSOR;
+					state = HL_PREPROCESSOR;
 				}
 			}
 			break;
@@ -327,16 +441,16 @@ static int spell_file(const char *file)
 				skip_line(&buf, endbuf);
 
 				if ((cmd_flags & CMD_ENABLE_SL) &&
-					handle_line("single-line comment", saved_lineno,
+					handle_line(&d, mslist, SPELL_SLINE, saved_lineno,
 					saved_colno, keyword_start, buf) < 0)
 				{
-					PANIC_GOTO(close2, "Error while reading a single-line comment,"
+					PANIC_GOTO(close3, "Error while reading a single-line comment,"
 						"line: %u / col: %u\n", saved_lineno, saved_colno);
 				}
 
 				curr_line++;
 				curr_coll = 0;
-				gs.state = HL_DEFAULT;
+				state = HL_DEFAULT;
 			}
 			break;
 
@@ -346,13 +460,13 @@ static int spell_file(const char *file)
 				if (*buf == '*' && buf+1 < endbuf && *(buf + 1) == '/')
 				{
 					if ((cmd_flags & CMD_ENABLE_ML) &&
-						handle_multiline(saved_lineno, saved_colno,
+						handle_multiline(&d, mslist, saved_lineno, saved_colno,
 						keyword_start, buf - 1) < 0)
 					{
-						PANIC_GOTO(close2, "Error while reading a multi-line comment,"
+						PANIC_GOTO(close3, "Error while reading a multi-line comment,"
 							"line: %u / col: %u\n", saved_lineno, saved_colno);
 					}
-					gs.state = HL_DEFAULT;
+					state = HL_DEFAULT;
 					buf++;
 				}
 			}
@@ -365,13 +479,13 @@ static int spell_file(const char *file)
 				if (!is_char_identifier(*buf))
 				{
 					if ((cmd_flags & CMD_ENABLE_ID) &&
-						handle_line("identifier", saved_lineno, saved_colno,
+						handle_line(&d, mslist, SPELL_IDENT, saved_lineno, saved_colno,
 						keyword_start, buf - 1) < 0)
 					{
-						PANIC_GOTO(close2, "Error while reading a identifier,"
+						PANIC_GOTO(close3, "Error while reading a identifier,"
 							"line: %u / col: %u\n", saved_lineno, saved_colno);
 					}
-					gs.state = HL_DEFAULT;
+					state = HL_DEFAULT;
 				}
 			}
 			break;
@@ -410,7 +524,7 @@ static int spell_file(const char *file)
 					c != 'x' && c != 'u' && c != 'l' && c != '.')
 				{
 					/* Just ignore and reset state, */
-					gs.state = HL_DEFAULT;
+					state = HL_DEFAULT;
 				}
 			}
 			break;
@@ -423,7 +537,7 @@ static int spell_file(const char *file)
 				 * just ignore and reset state.
 				 */
 				if (*buf == '\'' && buf+1 < endbuf && *(buf + 1) != '\'')
-					gs.state = HL_DEFAULT;
+					state = HL_DEFAULT;
 			}
 			break;
 
@@ -434,13 +548,13 @@ static int spell_file(const char *file)
 				if (*buf == '"' && *(buf - 1) != '\\')
 				{
 					if ((cmd_flags & CMD_ENABLE_ST) &&
-						handle_line("string", saved_lineno, saved_colno,
+						handle_line(&d, mslist, SPELL_STR, saved_lineno, saved_colno,
 						keyword_start, buf - 1) < 0)
 					{
-						PANIC_GOTO(close2, "Error while reading a string,"
+						PANIC_GOTO(close3, "Error while reading a string,"
 							"line: %u / col: %u\n", saved_lineno, saved_colno);
 					}
-					gs.state = HL_DEFAULT;
+					state = HL_DEFAULT;
 				}
 			}
 			break;
@@ -461,7 +575,7 @@ static int spell_file(const char *file)
 				 * who knows... users...
 				 */
 				if (*(buf - 1) != '\\')
-					gs.state = HL_DEFAULT;
+					state = HL_DEFAULT;
 			}
 			break;
 
@@ -471,7 +585,29 @@ static int spell_file(const char *file)
 		buf++;
 	}
 
+	dict_checker_finish(&d);
+
+	/*
+	 * Although printf is thread-safe, we need to ensure
+	 * that only one thread dumps misspellings per time,
+	 * otherwise, mixed lines from multiples files could
+	 * be printed together.
+	 */
+#ifndef NOT_PTHREADS
+pthread_mutex_lock(&stdout_mutex);
+#endif
+
+	dump_misspellings(file, mslist);
+
+#ifndef NOT_PTHREADS
+pthread_mutex_unlock(&stdout_mutex);
+#endif
+
 	ret = 0;
+close3:
+	for (i = 0; i < array_size(&mslist); i++)
+		free(array_get(&mslist, i, NULL));
+	array_finish(&mslist);
 close2:
 	free(fbuf);
 close1:
@@ -481,24 +617,39 @@ close0:
 }
 
 /**
- * @brief Initialize the syntax highlight engine.
- *
- * @return Returns 0 if success and -1 otherwise.
+ * @brief Worker thread, fetches a new file to process
+ * as soon as available.
  */
-static int spell_init(void)
+#ifndef NOT_PTHREADS
+void *spell_worker(void *data)
 {
-	dict_init();
-	return (0);
-}
+	((void)data);
+	struct file_queue *queue;
 
-/**
- * @brief Finishes everything related to the speller
- * and dictionary.
- */
-static void spell_finish(void)
-{
-	dict_finish();
+	while (1)
+	{
+		pthread_mutex_lock(&queue_mutex);
+			while (file_queue->path == NULL)
+			{
+				if (done)
+				{
+					pthread_mutex_unlock(&queue_mutex);
+					pthread_exit(NULL);
+				}
+				pthread_cond_wait(&file_avail, &queue_mutex);
+			}
+
+			queue = file_queue;
+			file_queue = file_queue->next;
+		pthread_mutex_unlock(&queue_mutex);
+
+		spell_file(queue->path);
+		free(queue->path);
+		free(queue);
+	}
+	return (data);
 }
+#endif
 
 /**
  * @brief nftw() handler, called each time a new file
@@ -517,22 +668,41 @@ static int do_check_file(const char *filepath, const struct stat *info,
                 const int typeflag, struct FTW *pathinfo)
 {
 	size_t len;
+#ifndef NOT_PTHREADS
+	struct file_queue *queue;
+#endif
 
 	/* Ignore everything that is not a file or is empty. */
-    if (typeflag != FTW_F || !info->st_size)
-    	return (0);
+	if (typeflag != FTW_F || !info->st_size)
+		return (0);
 
-    len = strlen(filepath);
+	len = strlen(filepath);
 
-    /* The files should have the extension .c or .h. */
-    if (((len - pathinfo->base) >= 3 && filepath[len - 2] == '.') &&
-    	(filepath[len - 1] == 'c' || filepath[len - 1] == 'h'))
-    {
-    	if (spell_file(filepath))
-    	{
-    		fprintf(stderr, "Error: Unable to check file %s\n", filepath);
-    		return (-1);
+	/* The files should have the extension .c or .h. */
+	if (((len - pathinfo->base) >= 3 && filepath[len - 2] == '.') &&
+		(filepath[len - 1] == 'c' || filepath[len - 1] == 'h'))
+	{
+#ifndef NOT_PTHREADS
+		if (nworkers > 1)
+		{
+			queue = malloc(sizeof(struct file_queue));
+			queue->path = strdup(filepath);
+
+			pthread_mutex_lock(&queue_mutex);
+				queue->next = file_queue;
+				file_queue = queue;
+				pthread_cond_signal(&file_avail);
+			pthread_mutex_unlock(&queue_mutex);
     	}
+		else
+#endif
+		{
+			if (spell_file(filepath))
+			{
+				fprintf(stderr, "Error: Unable to check file %s\n", filepath);
+				return (-1);
+			}
+		}
     }
     return (0);
 }
@@ -690,7 +860,35 @@ int main(int argc, char **argv)
 	((void)argc);
 
 	parse_args(argv);
-	spell_init();
+	dict_init();
+
+#ifndef NOT_PTHREADS
+	file_queue = calloc(1, sizeof(struct file_queue));
+	nworkers = (int)sysconf(_SC_NPROCESSORS_ONLN);
+	nworkers = (nworkers > NUM_WORKERS) ? NUM_WORKERS : nworkers;
+
+	/* Spawn. */
+	for (int i = 0; i < nworkers; i++)
+		if (pthread_create(&workers[i], NULL, &spell_worker, NULL))
+			panic("Cannot create thread #%d\n", i);
+#endif
+
 	do_check();
-	spell_finish();
+
+#ifndef NOT_PTHREADS
+	pthread_mutex_lock(&queue_mutex);
+		done = 1;
+		pthread_cond_broadcast(&file_avail);
+	pthread_mutex_unlock(&queue_mutex);
+
+	/* Join =). */
+	for (int i = 0; i < nworkers; i++)
+		if (pthread_join(workers[i], NULL))
+			panic("Error while joining thread #%d\n", i);
+
+	free(file_queue);
+#endif
+
+	dict_finish();
+	return (0);
 }

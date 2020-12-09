@@ -22,8 +22,9 @@
  * SOFTWARE.
  */
 
-#include <aspell.h>
 #include "spell.h"
+#include "dict_aspell.h"
+#include <aspell.h>
 
 AspellSpeller *speller;
 AspellDocumentChecker *checker;
@@ -88,6 +89,28 @@ int dict_finish(void)
 }
 
 /**
+ * @brief Initializes the checker for Aspell dictionary
+ *
+ * @return Returns 0 if success, -1 otherwise.
+ */
+int dict_checker_init(struct dict_data *d)
+{
+	((void)d);
+	return (0);
+}
+
+/**
+ * @brief Finishes the checker from Wordlist.
+ *
+ * @return Returns always 0.
+ */
+int dict_checker_finish(struct dict_data *d)
+{
+	((void)d);
+	return (0);
+}
+
+/**
  * @brief Check a single word per time.
  *
  * @param str Word to be checked.
@@ -114,8 +137,9 @@ int dict_check_word(const char *str, int size)
  * @note In order to check misspellings on lines, this function
  * *must* be called _before_ dict_next_misspelling().
  */
-int dict_check_line(const char *line, int size)
+int dict_check_line(struct dict_data *d, const char *line, int size)
 {
+	((void)d);
 	aspell_document_checker_process(checker, line, size);
 	return (0);
 }
@@ -133,8 +157,9 @@ int dict_check_line(const char *line, int size)
  * @note This function should be called only *after* a single
  * call the dict_check_line().
  */
-int dict_next_misspelling(unsigned *len, unsigned *off)
+int dict_next_misspelling(struct dict_data *d, unsigned *len, unsigned *off)
 {
+	((void)d);
 	AspellToken token;
 	token = aspell_document_checker_next_misspelling(checker);
 	*len = token.len;
