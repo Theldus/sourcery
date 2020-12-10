@@ -47142,12 +47142,14 @@ glycol
 glyph
 gm
 gm's
+gmail
 gmat
 gmo
 gmt
 gmt's
 gmtime
 gmtime_r
+gmx
 gnarl
 gnarl's
 gnarled
@@ -53211,6 +53213,7 @@ hotkeys
 hotlink
 hotlinks
 hotly
+hotmail
 hotness
 hotness's
 hotplate
@@ -54357,6 +54360,7 @@ icings
 ickier
 ickiest
 icky
+icloud
 icon
 icon's
 iconic
@@ -69308,6 +69312,7 @@ merchandising
 merchandising's
 merchant
 merchant's
+merchantability
 merchantable
 merchantman
 merchantman's
@@ -75595,6 +75600,7 @@ noninfectious
 noninflammatory
 noninflationary
 noninflected
+noninfringement
 nonintellectual
 nonintellectual's
 nonintellectuals
@@ -88062,6 +88068,7 @@ protocol's
 protocols
 proton
 proton's
+protonmail
 protons
 protoplasm
 protoplasm's
@@ -108822,6 +108829,7 @@ sublet
 sublet's
 sublets
 subletting
+sublicense
 sublieutenant
 sublieutenants
 sublimate
@@ -125835,6 +125843,7 @@ yammers
 yamoussoukro
 yamoussoukro's
 yams
+yandex
 yang
 yang's
 yangon
@@ -126523,6 +126532,7 @@ zodiacal
 zodiacs
 zoe
 zoe's
+zoho
 zola
 zola's
 zollverein

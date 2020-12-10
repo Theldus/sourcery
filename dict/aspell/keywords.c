@@ -1797,6 +1797,24 @@ const char * const keywords_tbl[] =
 	"va_copy",
 	"va_end",
 	"va_start",
+
+	/* Licenses. */
+	"sublicense",
+	"MERCHANTABILITY",
+	"NONINFRINGEMENT",
+
+	/* Email providers. */
+	"gmail",
+	"protonmail",
+	"outlook",
+	"hotmail",
+	"yahoo",
+	"zoho",
+	"aol",
+	"mail",
+	"gmx",
+	"icloud",
+	"yandex",
 };
 
 /* Size. */
