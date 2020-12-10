@@ -447,7 +447,7 @@ static int spell_file(const char *file)
 				else if (*buf == '/' && buf+1 < endbuf)
 				{
 					/* If one of them. */
-					if (*(buf + 1) == '/' && buf+2 < endbuf && isgraph(*(buf + 2)))
+					if (*(buf + 1) == '/' && buf+2 < endbuf)
 					{
 						state = HL_COMMENT_SINGLE;
 						buf++;
