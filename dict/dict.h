@@ -38,7 +38,7 @@
 	extern int dict_finish(void);
 	extern int dict_checker_init(struct dict_data *d);
 	extern int dict_checker_finish(struct dict_data *d);
-	extern int dict_check_word(struct dict_data *d, const char *str, int size);
+	extern int dict_check_word(const char *str, int size);
 	extern int dict_check_line(struct dict_data *d, const char *line,
 		int size);
 	extern int dict_next_misspelling(struct dict_data *d, unsigned *len,
