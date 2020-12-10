@@ -229,6 +229,50 @@ static int handle_multiline(struct dict_data *d,
 }
 
 /**
+ * @brief Searches for misspellings on a identifier.
+ *
+ * This function first tries to match the complete identifier,
+ * if fail, breaks into works and checks them individually.
+ *
+ * @param d Dictionary saved data.
+ * @param mslist Misspellings list.
+ * @param type Line type: comment, string or identifier.
+ * @param lineno Line that starts the string.
+ * @param linecol Column that starts the string.
+ * @param start Start position of the buffer (inclusive).
+ * @param end End position of the buffer (inclusive).
+ *
+ * @return Returns 0 if success, a negative number otherwise.
+ */
+static int handle_identifier(struct dict_data *d,
+	struct array *mslist,
+	unsigned lineno,
+	unsigned linecol,
+	char *start,
+	char *end)
+{
+	unsigned w_size;
+	unsigned l_size;
+	unsigned off;
+
+	l_size = (unsigned)LENGTH_PTR(end, start);
+
+	/* Check entire word. */
+	if (!dict_check_word(start, l_size))
+	{
+		/* Initialize the checker. */
+		dict_check_line(d, start, l_size);
+
+		/* Check for misspellings. */
+		while (dict_next_misspelling(d, &w_size, &off))
+			add_misspelling(mslist, SPELL_IDENT, lineno, linecol + off, w_size,
+				start + off);
+	}
+
+	return (0);
+}
+
+/**
  * @brief Searches for misspellings on a single line.
  *
  * @param d Dictionary saved data.
@@ -479,7 +523,7 @@ static int spell_file(const char *file)
 				if (!is_char_identifier(*buf))
 				{
 					if ((cmd_flags & CMD_ENABLE_ID) &&
-						handle_line(&d, mslist, SPELL_IDENT, saved_lineno, saved_colno,
+						handle_identifier(&d, mslist, saved_lineno, saved_colno,
 						keyword_start, buf - 1) < 0)
 					{
 						PANIC_GOTO(close3, "Error while reading a identifier,"
