@@ -52,7 +52,7 @@ USE_PTHREAD ?= yes
 # Wordlist also have a great performance (up to 2x faster than
 # Aspell) and do not requires any dependencies.
 #
-DICT ?= aspell
+DICT ?= wordlist
 
 ifeq ($(DICT), aspell)
 	CFLAGS  += -DDICT_ASPELL -DNOT_PTHREADS
