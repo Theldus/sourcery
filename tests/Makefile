@@ -20,9 +20,21 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-# Default rules.
-*.o
-spell
-dict/wordlist/gen/.tmp_wordlist.txt
-dict/wordlist/gen/gen
-tests/outputs/test_out_wordlist_run
+#===================================================================
+# Paths
+#===================================================================
+
+SPELL_DIR = $(abspath $(CURDIR)/../)
+
+#===================================================================
+# Rules
+#===================================================================
+all: tests
+
+# Run tests
+tests: $(SPELL_DIR)/spell
+	@bash run-tests.sh
+
+# Build spell
+$(SPELL_DIR)/spell:
+	$(MAKE) -C $(SPELL_DIR)/ all DICT=wordlist

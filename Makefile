@@ -69,6 +69,7 @@ endif
 #===================================================================
 # Rules
 #===================================================================
+.PHONY: tests
 
 # Sources
 C_SRC = $(wildcard $(SRC)/dict/$(DICT)/*.c) \
@@ -91,6 +92,10 @@ spell: $(OBJ)
 # Generate wordlist.c and hash_wordlist.c
 gen:
 	$(MAKE) -C dict/wordlist/gen/ all
+
+# Tests
+tests:
+	$(MAKE) -C tests/ all
 
 # General
 clean:
