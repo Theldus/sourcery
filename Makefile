@@ -26,6 +26,8 @@
 
 INCLUDE = $(CURDIR)/include/ -I $(CURDIR)/dict/
 SRC     = $(CURDIR)/
+PREFIX ?= /usr/local
+BINDIR  = $(PREFIX)/bin
 
 #===================================================================
 # Flags
@@ -69,6 +71,8 @@ endif
 #===================================================================
 # Rules
 #===================================================================
+
+# Conflicts
 .PHONY: tests
 
 # Sources
@@ -96,6 +100,15 @@ gen:
 # Tests
 tests:
 	$(MAKE) -C tests/ all
+
+# Install rules
+install: all
+	install -d $(DESTDIR)$(BINDIR)
+	install -m 755 srcry $(DESTDIR)$(BINDIR)
+
+# Uninstall rules
+uninstall:
+	rm -f $(DESTDIR)$(BINDIR)/srcry
 
 # General
 clean:
