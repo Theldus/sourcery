@@ -823,6 +823,12 @@ static void do_check(void)
 static void usage(const char *prgname)
 {
 	fprintf(stderr, "Usage: %s [OPTIONS] [PATH]\n", prgname);
+	fprintf(stderr, "\n   Searches for misspellings on files and paths recursively\n\n");
+	fprintf(stderr, "Example: \n");
+	fprintf(stderr, "   srcry file.c -s                 (only strings)\n");
+	fprintf(stderr, "   srcry file1.c file2.c           (default)\n");
+	fprintf(stderr, "   srcry path1/ a.c b.c c.c d.c -a (all)\n");
+	fprintf(stderr, "   (and etc)\n\n");
 	fprintf(stderr, "Options: \n");
 	fprintf(stderr, "   -l Enable single-line (//) comments analysis\n");
 	fprintf(stderr, "   -m Enable multi-line (/* */) comments analysis\n");
