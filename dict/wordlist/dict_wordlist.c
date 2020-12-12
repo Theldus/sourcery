@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 
-#include "spell.h"
+#include "srcry.h"
 #include "dict_wordlist.h"
 #include <strings.h>
 
