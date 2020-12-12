@@ -22,7 +22,7 @@
 
 # Default rules.
 *.o
-spell
+srcry
 dict/wordlist/gen/.tmp_wordlist.txt
 dict/wordlist/gen/gen
 tests/outputs/test_out_wordlist_run

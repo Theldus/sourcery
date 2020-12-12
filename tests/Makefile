@@ -32,9 +32,9 @@ SPELL_DIR = $(abspath $(CURDIR)/../)
 all: tests
 
 # Run tests
-tests: $(SPELL_DIR)/spell
+tests: $(SPELL_DIR)/srcry
 	@bash run-tests.sh
 
-# Build spell
-$(SPELL_DIR)/spell:
+# Build srcry
+$(SPELL_DIR)/srcry:
 	$(MAKE) -C $(SPELL_DIR)/ all DICT=wordlist

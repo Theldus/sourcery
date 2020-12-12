@@ -45,7 +45,7 @@ echo ""
 echo -n "Tests..."
 
 # Run
-../spell test.c -a > outputs/test_out_wordlist_run
+../srcry test.c -a > outputs/test_out_wordlist_run
 
 if [ $? -eq 0 ]
 then
@@ -61,7 +61,7 @@ then
 				--leak-check=full\
 				--errors-for-leak-kinds=all\
 				--error-exitcode=1\
-				../spell test.c -a &> /dev/null
+				../srcry test.c -a &> /dev/null
 
 			if [ $? -eq 0 ]
 			then

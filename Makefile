@@ -83,10 +83,10 @@ OBJ = $(C_SRC:.c=.o)
 	$(CC) $< $(CFLAGS) -c -o $@
 
 # All
-all: spell
+all: srcry
 
 # Main program
-spell: $(OBJ)
+srcry: $(OBJ)
 	$(CC) $^ $(CFLAGS) $(LDFLAGS) -o $@
 
 # Generate wordlist.c and hash_wordlist.c
@@ -100,6 +100,6 @@ tests:
 # General
 clean:
 	rm -f $(SRC)/*.o
-	rm -f $(SRC)/spell
+	rm -f $(SRC)/srcry
 	rm -f $(SRC)/dict/$(DICT)/*.o
 	$(MAKE) -C dict/wordlist/gen/ clean
