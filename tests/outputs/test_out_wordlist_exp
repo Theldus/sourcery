@@ -1,15 +1,11 @@
+test.c:4:41: multi-line comment (davidsondfgl) may be wrong
 test.c:41:14: identifier (tini) may be wrong
-test.c:41:52: single-line comment (youu) may be wrong
-test.c:46:11: multi-line comment (argc) may be wrong
-test.c:47:11: multi-line comment (argv) may be wrong
+test.c:41:53: single-line comment (youu) may be wrong
 test.c:51:10: multi-line comment (Thix) may be wrong
-test.c:53:14: identifier (argc) may be wrong
-test.c:53:27: identifier (argv) may be wrong
 test.c:55:9: identifier (macr) may be wrong
 test.c:57:12: multi-line comment (Orshouldbe) may be wrong
 test.c:59:14: single-line comment (coment) may be wrong
 test.c:62:61: multi-line comment (alloc) may be wrong
 test.c:63:36: multi-line comment (alloc) may be wrong
 test.c:68:11: identifier (ptr) may be wrong
-test.c:68:25: identifier (alloc) may be wrong
 test.c:69:10: identifier (ptr) may be wrong
