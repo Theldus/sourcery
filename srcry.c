@@ -699,7 +699,7 @@ void *spell_worker(void *data)
 				if (done)
 				{
 					pthread_mutex_unlock(&queue_mutex);
-					pthread_exit(NULL);
+					return (NULL);
 				}
 				pthread_cond_wait(&file_avail, &queue_mutex);
 			}
