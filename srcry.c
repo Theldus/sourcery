@@ -530,6 +530,16 @@ static int spell_file(const char *file)
 							"line: %u / col: %u\n", saved_lineno, saved_colno);
 					}
 					state = HL_DEFAULT;
+
+					/*
+					 * We still need to parse that character, so we rewind
+					 * one char.
+					 */
+					if (!curr_coll)
+						curr_line--;
+					else
+						curr_coll--;
+					goto skip_increment;
 				}
 			}
 			break;
@@ -569,6 +579,16 @@ static int spell_file(const char *file)
 				{
 					/* Just ignore and reset state, */
 					state = HL_DEFAULT;
+
+					/*
+					 * We still need to parse that character, so we rewind
+					 * one char.
+					 */
+					if (!curr_coll)
+						curr_line--;
+					else
+						curr_coll--;
+					goto skip_increment;
 				}
 			}
 			break;
@@ -627,6 +647,7 @@ static int spell_file(const char *file)
 				break;
 		}
 		buf++;
+skip_increment:;
 	}
 
 	dict_checker_finish(&d);
