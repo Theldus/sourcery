@@ -66,10 +66,10 @@ const char * const misspell_types[] = {
 /*
  * Is identifier character lookup table
  *
- * This is simple and faster than using islnum(c) || c == '_',
+ * This is simple and faster than using isalnum(c) || c == '_',
  * so I'll use this instead.
  */
-static const int is_indent[256] = {
+static const int is_ident[256] = {
 	['0'] = 1, ['1'] = 1, ['2'] = 1, ['3'] = 1, ['4'] = 1, ['5'] = 1,
 	['6'] = 1, ['7'] = 1, ['8'] = 1, ['9'] = 1, ['A'] = 1, ['B'] = 1,
 	['C'] = 1, ['D'] = 1, ['E'] = 1, ['F'] = 1, ['G'] = 1, ['H'] = 1,
@@ -81,6 +81,16 @@ static const int is_indent[256] = {
 	['l'] = 1, ['m'] = 1, ['n'] = 1, ['o'] = 1, ['p'] = 1, ['q'] = 1,
 	['r'] = 1, ['s'] = 1, ['t'] = 1, ['u'] = 1, ['v'] = 1, ['x'] = 1,
 	['w'] = 1, ['y'] = 1, ['z'] = 1,
+};
+
+/*
+ * My isdigit()... maybe someone could argue that I should rely
+ * on libc instead of doing it myself, but... this is fast...
+ * and I swear that I will only pass chars as indexes here =).
+ */
+static const int is_digit[256] = {
+	['0'] = 1, ['1'] = 1, ['2'] = 1, ['3'] = 1, ['4'] = 1, ['5'] = 1,
+	['6'] = 1, ['7'] = 1, ['8'] = 1, ['9'] = 1
 };
 
 /* Current flags. */
@@ -422,7 +432,7 @@ static int spell_file(const char *file)
 				 * A valid C identifier may contain numbers, but *not*
 				 * as a suffix.
 				 */
-				if (is_indent[(int)*buf] && !isdigit(*buf))
+				if (is_ident[(int)*buf] && !is_digit[(int)*buf])
 				{
 					saved_lineno = curr_line;
 					saved_colno  = curr_coll;
@@ -441,7 +451,7 @@ static int spell_file(const char *file)
 				 * would be ignored, but ULL would be considered as
 				 * identifier if not handled as part of number.
 				 */
-				else if (isdigit(*buf))
+				else if (is_digit[(int)*buf])
 					state = HL_NUMBER;
 
 				/*
@@ -540,7 +550,7 @@ static int spell_file(const char *file)
 			case HL_IDENTIFIER:
 			{
 				/* End of identifier. */
-				if (!is_indent[(int)*buf])
+				if (!is_ident[(int)*buf])
 				{
 					if ((cmd_flags & CMD_ENABLE_ID) &&
 						handle_identifier(&d, mslist, saved_lineno, saved_colno,
@@ -594,7 +604,7 @@ static int spell_file(const char *file)
 				 * and everything starting with a number (except inside strings or
 				 * comments) will be a number.
 				 */
-				if (!isdigit(c) && (c < 'a' || c > 'f') && c != 'b' &&
+				if (!is_digit[(int)c] && (c < 'a' || c > 'f') && c != 'b' &&
 					c != 'x' && c != 'u' && c != 'l' && c != '.')
 				{
 					/* Just ignore and reset state, */

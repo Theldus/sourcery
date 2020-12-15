@@ -44,7 +44,7 @@ extern struct words {
  */
 static inline int contains(const char *k, int l)
 {
-	struct words w;
+	struct words *w;
 	int size;
 	int h;
 
@@ -59,11 +59,11 @@ static inline int contains(const char *k, int l)
 	 * We can avoid strlen by storing all the key
 	 * lengths.
 	 */
-	w = words_tbl[h];
-	if (w.len != size)
+	w = &words_tbl[h];
+	if (w->len != size)
 		return (0);
 
-	return (strncasecmp(w.w, k, size) == 0);
+	return (strncasecmp(w->w, k, size) == 0);
 }
 
 /**
