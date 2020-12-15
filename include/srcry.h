@@ -42,13 +42,6 @@
 	#include <unistd.h>
 	#include <ftw.h>
 
-	/* Always inline. */
-#	if defined(__GNUC__) || defined(__GNUG__) || defined(__clang__)
-#		define INLINE  __attribute__((always_inline)) inline
-#	else
-#		define INLINE inline
-#	endif
-
 	/* Panic that goto to a position for clean up. */
 	#define PANIC_GOTO(label, str, ...) \
 		do {\
@@ -74,18 +67,11 @@
 	#define NUM_WORKERS 8
 
 	/**
-	 * Checks if the given character belongs to a valid identifier
-	 * or not.
-	 *
-	 * @param c Character to be checked.
-	 *
-	 * @return Returns 1 if the character belongs to a valid
-	 * identifier, 0 otherwise.
+	 * Triggers a compile time error if the expression
+	 * evaluates to 0.
 	 */
-	INLINE static int is_char_identifier(char c)
-	{
-		return (isalnum(c) || c == '_');
-	}
+	#define COMPILE_TIME_ASSERT(expr)  \
+		switch(0){case 0:case expr:;}
 
 	/* Our keyword table. */
 	extern const char * const keywords_tbl[];
