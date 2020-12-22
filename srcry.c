@@ -477,7 +477,7 @@ static int spell_file(const char *file)
 				else if (*buf == '/' && buf+1 < endbuf)
 				{
 					/* If one of them. */
-					if (*(buf + 1) == '/' && buf+2 < endbuf)
+					if (*(buf + 1) == '/' && buf+2 < endbuf && *(buf + 2) != '\n')
 					{
 						state = HL_COMMENT_SINGLE;
 						buf++;

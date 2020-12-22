@@ -57,6 +57,8 @@ int main(int argc, char **argv)
         /* Orshouldbe, right? */ 1, 1LL, 1ULL);
 
     // Alone coment.
+//
+    // The last empty single-line comment should not interfre with this
 
     /*
      * Identifier that is valid as a complete word 'aligned_alloc'
