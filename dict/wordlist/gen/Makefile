@@ -39,7 +39,7 @@ WL_DIR   = $(abspath $(CURDIR)/../)
 	$(CC) $< $(CFLAGS) -c
 
 # Build gen
-all: $(WL_DIR)/wordlist.c $(WL_DIR)/hash_wordlist.c
+all: $(WL_DIR)/$(WLST)wordlist.c $(WL_DIR)/$(WLST)hash_wordlist.c
 	$(info $(^F) generated with success!)
 
 # Generate wordlist.c
@@ -51,18 +51,18 @@ mph/mph:
 	git submodule update --init
 	$(MAKE) -C mph/
 
-.tmp_wordlist.txt: wordlist.txt
-	@cat "wordlist.txt" | tr '[:upper:]' '[:lower:]' | sort |\
-		sort -u > .tmp_wordlist.txt
+.tmp_$(WLST)wordlist.txt: $(WLST)wordlist.txt
+	@cat "$(WLST)wordlist.txt" | tr '[:upper:]' '[:lower:]' | sort |\
+		sort -u > .tmp_$(WLST)wordlist.txt
 
-$(WL_DIR)/wordlist.c: .tmp_wordlist.txt gen
-	@./gen .tmp_wordlist.txt > $(WL_DIR)/wordlist.c
+$(WL_DIR)/$(WLST)wordlist.c: .tmp_$(WLST)wordlist.txt gen
+	@./gen .tmp_$(WLST)wordlist.txt > $(WL_DIR)/$(WLST)wordlist.c
 
-$(WL_DIR)/hash_wordlist.c: .tmp_wordlist.txt mph/mph
-	@./mph/mph < .tmp_wordlist.txt | ./mph/emitc -nlsi > $(WL_DIR)/hash_wordlist.c
+$(WL_DIR)/$(WLST)hash_wordlist.c: .tmp_$(WLST)wordlist.txt mph/mph
+	@./mph/mph < .tmp_$(WLST)wordlist.txt | ./mph/emitc -nlsi > $(WL_DIR)/$(WLST)hash_wordlist.c
 
 # Clean
 clean:
 	@rm -f *.o
 	@rm -f gen
-	@rm -f .tmp_wordlist.txt
+	rm -f .tmp_$(WLST)wordlist.txt

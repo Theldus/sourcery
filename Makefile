@@ -66,6 +66,11 @@ else
 	else
 		CFLAGS += -DNOT_PTHREADS
 	endif
+
+	ifeq ($(CHECK), reverse)
+		WLST = rev_
+		CFLAGS += -DCHECK_REVERSE
+	endif
 endif
 
 #===================================================================
@@ -76,7 +81,9 @@ endif
 .PHONY: tests
 
 # Sources
-C_SRC = $(wildcard $(SRC)/dict/$(DICT)/*.c) \
+C_SRC = $(wildcard $(SRC)/dict/$(DICT)/dict_wordlist.c) \
+		$(wildcard $(SRC)/dict/$(DICT)/$(WLST)hash_wordlist.c) \
+		$(wildcard $(SRC)/dict/$(DICT)/$(WLST)wordlist.c) \
 		$(wildcard $(SRC)/*.c)
 
 # Objects
@@ -95,11 +102,11 @@ srcry: $(OBJ)
 
 # Generate wordlist.c and hash_wordlist.c
 gen:
-	$(MAKE) -C dict/wordlist/gen/ all
+	$(MAKE) -C dict/wordlist/gen/ all WLST=$(WLST)
 
 # Tests
 tests:
-	$(MAKE) -C tests/ all
+	$(MAKE) -C tests/ all WLST=$(WLST)
 
 # Install rules
 install: all
@@ -115,4 +122,4 @@ clean:
 	rm -f $(SRC)/*.o
 	rm -f $(SRC)/srcry
 	rm -f $(SRC)/dict/$(DICT)/*.o
-	$(MAKE) -C dict/wordlist/gen/ clean
+	$(MAKE) -C dict/wordlist/gen/ clean WLST=$(WLST)

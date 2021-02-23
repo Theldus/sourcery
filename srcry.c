@@ -287,8 +287,15 @@ static int handle_identifier(struct dict_data *d,
 
 	l_size = (unsigned)LENGTH_PTR(end, start);
 
+	/*
+	 * In reverse mode, we always want to break the identifier,
+	 * so we skip the 'if statement' if reverse mode enabled.
+	 */
+
+#ifndef CHECK_REVERSE
 	/* Check entire word. */
 	if (!dict_check_word(start, l_size))
+#endif
 	{
 		/* Initialize the checker. */
 		dict_check_line(d, start, l_size);

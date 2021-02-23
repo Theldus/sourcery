@@ -144,7 +144,15 @@ int dict_checker_finish(struct dict_data *d)
  */
 int dict_check_word(const char *str, int size)
 {
+#ifdef DEBUG
+	printf("checking word: (%.*s)\n", size, str);
+#endif
+
+#ifndef CHECK_REVERSE
 	return (contains(str, size));
+#else
+	return (!contains(str, size));
+#endif
 }
 
 /**
