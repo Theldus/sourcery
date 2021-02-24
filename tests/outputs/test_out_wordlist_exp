@@ -4,9 +4,11 @@ test.c:41:53: single-line comment (youu) may be wrong
 test.c:51:10: multi-line comment (Thix) may be wrong
 test.c:55:9: identifier (macr) may be wrong
 test.c:57:12: multi-line comment (Orshouldbe) may be wrong
-test.c:59:14: single-line comment (coment) may be wrong
-test.c:61:54: single-line comment (interfre) may be wrong
-test.c:64:61: multi-line comment (alloc) may be wrong
-test.c:65:36: multi-line comment (alloc) may be wrong
-test.c:70:11: identifier (ptr) may be wrong
-test.c:71:10: identifier (ptr) may be wrong
+test.c:59:24: string (scape) may be wrong
+test.c:60:19: string (escap) may be wrong
+test.c:62:14: single-line comment (coment) may be wrong
+test.c:64:54: single-line comment (interfre) may be wrong
+test.c:67:61: multi-line comment (alloc) may be wrong
+test.c:68:36: multi-line comment (alloc) may be wrong
+test.c:73:11: identifier (ptr) may be wrong
+test.c:74:10: identifier (ptr) may be wrong

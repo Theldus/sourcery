@@ -165,7 +165,7 @@ Linux's checkpatch.pl spell checker, but _much_ faster:
 ```bash
 # Build with Wordlist + Reverse check support
 make CHECK=reverse # (or make DICT=wordlist CHECK=reverse)
-make install       # (PREFIX and DESTDIR may be set in order to change the paths (default: /usr/local/))
+make install       # (PREFIX and DESTDIR may be set in order to change the paths)
 ```
 
 ### Aspell

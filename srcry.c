@@ -645,8 +645,23 @@ static int spell_file(const char *file)
 			/* String state. */
 			case HL_STRING:
 			{
-				/* Should we end string state?. */
-				if (*buf == '"' && *(buf - 1) != '\\')
+				/*
+				 * Should we end string state?.
+				 *
+				 * Two conditions:
+				 * a) If " and previous character is not \, i.e != \"
+				 * (not inside a double quotes escape)
+				 *
+				 * b) If " and last two previous characters is \\, i.e == \\
+				 * (inside a \ scape sequence)ç
+				 */
+				if (*buf == '"' &&
+					(*(buf - 1) != '\\' ||
+						(buf - 2 >= fbuf
+							&& *(buf - 1) == '\\' &&
+								*(buf - 2) == '\\')
+					)
+				)
 				{
 					if ((cmd_flags & CMD_ENABLE_ST) &&
 						handle_line(&d, mslist, SPELL_STR, saved_lineno, saved_colno,

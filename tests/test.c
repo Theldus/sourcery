@@ -56,6 +56,9 @@ int main(int argc, char **argv)
     printf("Format specifiers works as well: %d %lld %" PRIx64 "\n",
         /* Orshouldbe, right? */ 1, 1LL, 1ULL);
 
+    printf("first test scape\"");
+    printf("slash escap \\");
+
     // Alone coment.
 //
     // The last empty single-line comment should not interfre with this
