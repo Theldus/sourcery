@@ -24,7 +24,6 @@
 
 #include "srcry.h"
 #include "dict.h"
-#include "array.h"
 
 #ifndef NOT_PTHREADS
 #include <pthread.h>
@@ -117,21 +116,12 @@ struct file_queue
 struct file_queue *file_queue;
 #endif
 
-/* Misspell word. */
-struct misspell
-{
-	unsigned type;
-	unsigned line;
-	unsigned col;
-	unsigned len;
-	char *word;
-};
-
 /**
- * @brief Add a single word misspelling into the misspellings
- * list.
+ * @brief Add a single word misspelling into the output
+ * buffer/stream @p stream.
  *
- * @param mslist Misspellings list.
+ * @param stream Output stream.
+ * @param file Analyzed file.
  * @param type Misspelling type (string, comment...).
  * @param lineno Line number.
  * @param linecol Line column.
@@ -140,47 +130,40 @@ struct misspell
  *
  * @return Returns 0 if success and -1 otherwise.
  */
-static int add_misspelling(struct array *mslist,
+static inline int add_misspelling(FILE *stream, const char *file,
 	unsigned type,
 	unsigned lineno,
 	unsigned linecol,
 	unsigned length,
 	char *word)
 {
-	struct misspell *s;
-	if ((s = malloc(sizeof(struct misspell))) == NULL)
-		return (-1);
-
-	s->type = type;
-	s->line = lineno;
-	s->col  = linecol;
-	s->len  = length;
-	s->word = word;
-
-	array_add(&mslist, s);
-	return (0);
+	return (fprintf(stream, "%s:%d:%d: %s (%.*s) may be wrong\n",
+		file, lineno, linecol, misspell_types[type], length, word));
 }
 
 /**
- * @brief For the current misspellings list @p mslist,
- * prints all of them in the stdout.
+ * @brief Dump the contents of @p buf in the stdout, i.e:
+ * all the misspellings, already nicely formatted.
  *
- * @param file Processed file.
- * @param mslist Misspellings list.
+ * @param buf Spellings buffer.
+ * @param len Buffer size (in bytes).
  */
-static void dump_misspellings(const char *file,
-	struct array *mslist)
+static void dump_misspellings(const char *buf, size_t len)
 {
-	size_t i;
-	size_t size;
-	struct misspell *m;
+	size_t  twb; /* Total written bytes. */
+	ssize_t  wb; /* Written bytes.       */
+	int fd;      /* File number.         */
 
-	size = array_size(&mslist);
-	for (i = 0; i < size; i++)
+	twb = 0;
+	wb  = 0;
+	fd  = fileno(stdout);
+
+	while (twb < len)
 	{
-		m = array_get(&mslist, i, NULL);
-		printf("%s:%d:%d: %s (%.*s) may be wrong\n", file, m->line,
-			m->col, misspell_types[m->type], m->len, m->word);
+		wb = write(fd, (buf + twb), (len - twb));
+		if (wb == -1)
+			break;
+		twb += wb;
 	}
 }
 
@@ -205,6 +188,8 @@ static inline void skip_line(char **buf, char *end)
  * through multiples lines.
  *
  * @param d Dictionary saved data.
+ * @param stream Output stream.
+ * @param file Analyzed file.
  * @param mslist Misspellings list.
  * @param lineno Line that starts the string.
  * @param colno Column that starts the string.
@@ -214,7 +199,8 @@ static inline void skip_line(char **buf, char *end)
  * @return Returns 0 if success, a negative number otherwise.
  */
 static int handle_multiline(struct dict_data *d,
-	struct array *mslist,
+	FILE *stream,
+	const char *file,
 	unsigned lineno,
 	unsigned linecol,
 	char *start,
@@ -245,7 +231,7 @@ static int handle_multiline(struct dict_data *d,
 		dict_check_line(d, start, l_size);
 
 		while (dict_next_misspelling(d, &w_size, &off))
-			add_misspelling(mslist, SPELL_MLINE, l_count, s_col + off,
+			add_misspelling(stream, file, SPELL_MLINE, l_count, s_col + off,
 				w_size, start + off);
 
 		rem_bytes -= l_size;
@@ -265,7 +251,8 @@ static int handle_multiline(struct dict_data *d,
  * if fail, breaks into works and checks them individually.
  *
  * @param d Dictionary saved data.
- * @param mslist Misspellings list.
+ * @param stream Output stream.
+ * @param file Analyzed file.
  * @param type Line type: comment, string or identifier.
  * @param lineno Line that starts the string.
  * @param linecol Column that starts the string.
@@ -275,7 +262,8 @@ static int handle_multiline(struct dict_data *d,
  * @return Returns 0 if success, a negative number otherwise.
  */
 static int handle_identifier(struct dict_data *d,
-	struct array *mslist,
+	FILE *stream,
+	const char *file,
 	unsigned lineno,
 	unsigned linecol,
 	char *start,
@@ -302,8 +290,8 @@ static int handle_identifier(struct dict_data *d,
 
 		/* Check for misspellings. */
 		while (dict_next_misspelling(d, &w_size, &off))
-			add_misspelling(mslist, SPELL_IDENT, lineno, linecol + off, w_size,
-				start + off);
+			add_misspelling(stream, file, SPELL_IDENT, lineno, linecol + off,
+				w_size, start + off);
 	}
 
 	return (0);
@@ -313,7 +301,8 @@ static int handle_identifier(struct dict_data *d,
  * @brief Searches for misspellings on a single line.
  *
  * @param d Dictionary saved data.
- * @param mslist Misspellings list.
+ * @param stream Output stream.
+ * @param file Analyzed file.
  * @param type Line type: comment, string or identifier.
  * @param lineno Line that starts the string.
  * @param linecol Column that starts the string.
@@ -323,7 +312,8 @@ static int handle_identifier(struct dict_data *d,
  * @return Returns 0 if success, a negative number otherwise.
  */
 static int handle_line(struct dict_data *d,
-	struct array *mslist,
+	FILE *stream,
+	const char *file,
 	unsigned type,
 	unsigned lineno,
 	unsigned linecol,
@@ -341,7 +331,7 @@ static int handle_line(struct dict_data *d,
 
 	/* Check for misspellings. */
 	while (dict_next_misspelling(d, &w_size, &off))
-		add_misspelling(mslist, type, lineno, linecol + off, w_size,
+		add_misspelling(stream, file, type, lineno, linecol + off, w_size,
 			start + off);
 
 	return (0);
@@ -360,16 +350,17 @@ static int spell_file(const char *file)
 {
 	unsigned saved_lineno;  /* Line number from last operation.   */
 	unsigned saved_colno;   /* Column number from last operation. */
-	struct array *mslist;   /* Misspellings list.                 */
 	char *keyword_start;    /* Keyword start pointer.             */
 	struct dict_data d;     /* Dictionary data.                   */
 	unsigned curr_line;     /* Current line.                      */
 	unsigned curr_coll;     /* Current column.                    */
+	size_t stream_len;      /* Output stream length.              */
+	char *stream_buf;       /* Output stream buffer.              */
+	FILE *stream;           /* Output stream.                     */
 	char *endbuf;           /* End buffer marker.                 */
 	char *fbuf;             /* Start buffer marker.               */
 	char *buf;              /* Current buffer position.           */
 	int state;              /* Current state.                     */
-	size_t i;               /* Loop index.                        */
 	long fz;                /* File size.                         */
 	FILE *f;                /* File.                              */
 	int ret;                /* Return value.                      */
@@ -397,9 +388,10 @@ static int spell_file(const char *file)
 		PANIC_GOTO(close2, "Error: cannot read %lu bytes of file\n", fz);
 	fbuf[fz] = '\0';
 
-	/* Misspell list. */
-	if (array_init(&mslist))
-		PANIC_GOTO(close2, "Unable to create spell list, file: %s\n", file);
+	/* Stream/buffer list. */
+	stream_len = 8192;
+	if ((stream = open_memstream(&stream_buf, &stream_len)) == NULL)
+		PANIC_GOTO(close2, "Unable to create stream buffer, file: %s\n", file);
 
 	/* Setup buffers and clear everything. */
 	state         = HL_DEFAULT;
@@ -522,7 +514,7 @@ static int spell_file(const char *file)
 				skip_line(&buf, endbuf);
 
 				if ((cmd_flags & CMD_ENABLE_SL) &&
-					handle_line(&d, mslist, SPELL_SLINE, saved_lineno,
+					handle_line(&d, stream, file, SPELL_SLINE, saved_lineno,
 					saved_colno, keyword_start, buf) < 0)
 				{
 					PANIC_GOTO(close3, "Error while reading a single-line comment,"
@@ -541,7 +533,7 @@ static int spell_file(const char *file)
 				if (*buf == '*' && buf+1 < endbuf && *(buf + 1) == '/')
 				{
 					if ((cmd_flags & CMD_ENABLE_ML) &&
-						handle_multiline(&d, mslist, saved_lineno, saved_colno,
+						handle_multiline(&d, stream, file, saved_lineno, saved_colno,
 						keyword_start, buf - 1) < 0)
 					{
 						PANIC_GOTO(close3, "Error while reading a multi-line comment,"
@@ -560,7 +552,7 @@ static int spell_file(const char *file)
 				if (!is_ident[(int)*buf])
 				{
 					if ((cmd_flags & CMD_ENABLE_ID) &&
-						handle_identifier(&d, mslist, saved_lineno, saved_colno,
+						handle_identifier(&d, stream, file, saved_lineno, saved_colno,
 						keyword_start, buf - 1) < 0)
 					{
 						PANIC_GOTO(close3, "Error while reading a identifier,"
@@ -664,7 +656,7 @@ static int spell_file(const char *file)
 				)
 				{
 					if ((cmd_flags & CMD_ENABLE_ST) &&
-						handle_line(&d, mslist, SPELL_STR, saved_lineno, saved_colno,
+						handle_line(&d, stream, file, SPELL_STR, saved_lineno, saved_colno,
 						keyword_start, buf - 1) < 0)
 					{
 						PANIC_GOTO(close3, "Error while reading a string,"
@@ -714,7 +706,8 @@ skip_increment:;
 pthread_mutex_lock(&stdout_mutex);
 #endif
 
-	dump_misspellings(file, mslist);
+	fflush(stream);
+	dump_misspellings(stream_buf, stream_len);
 
 #ifndef NOT_PTHREADS
 pthread_mutex_unlock(&stdout_mutex);
@@ -722,9 +715,8 @@ pthread_mutex_unlock(&stdout_mutex);
 
 	ret = 0;
 close3:
-	for (i = 0; i < array_size(&mslist); i++)
-		free(array_get(&mslist, i, NULL));
-	array_finish(&mslist);
+	fclose(stream);
+	free(stream_buf);
 close2:
 	free(fbuf);
 close1:
