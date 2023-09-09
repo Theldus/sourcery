@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2020 Davidson Francis <davidsondfgl@gmail.com>
+# Copyright (c) 2020-2023 Davidson Francis <davidsondfgl@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -81,10 +81,10 @@ endif
 .PHONY: tests
 
 # Sources
-C_SRC = $(wildcard $(SRC)/dict/$(DICT)/dict_wordlist.c) \
-		$(wildcard $(SRC)/dict/$(DICT)/$(WLST)hash_wordlist.c) \
-		$(wildcard $(SRC)/dict/$(DICT)/$(WLST)wordlist.c) \
-		$(wildcard $(SRC)/*.c)
+C_SRC = $(SRC)/dict/$(DICT)/dict_wordlist.c \
+		$(SRC)/dict/$(DICT)/$(WLST)hash_wordlist.c \
+		$(SRC)/dict/$(DICT)/$(WLST)wordlist.c \
+		srcry.c
 
 # Objects
 OBJ = $(C_SRC:.c=.o)
