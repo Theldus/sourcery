@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2020 Davidson Francis <davidsondfgl@gmail.com>
+# Copyright (c) 2020-2023 Davidson Francis <davidsondfgl@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -26,7 +26,7 @@
 
 CC      ?= gcc
 CFLAGS  += -Wall -Wextra -std=c99 -pedantic -O2
-SRC      = $(wildcard *.c)
+SRC      = gen.c
 OBJ      = $(SRC:.c=.o)
 WL_DIR   = $(abspath $(CURDIR)/../)
 
@@ -54,6 +54,7 @@ mph/mph:
 .tmp_$(WLST)wordlist.txt: $(WLST)wordlist.txt
 	@cat "$(WLST)wordlist.txt" | tr '[:upper:]' '[:lower:]' | sort |\
 		sort -u > .tmp_$(WLST)wordlist.txt
+	@cp .tmp_$(WLST)wordlist.txt $(WLST)wordlist.txt
 
 $(WL_DIR)/$(WLST)wordlist.c: .tmp_$(WLST)wordlist.txt gen
 	@./gen .tmp_$(WLST)wordlist.txt > $(WL_DIR)/$(WLST)wordlist.c
