@@ -186,6 +186,10 @@ Sourcery is always open to the community and willing to accept contributions,
 whether with issues, documentation, testing, new features, bugfixes, typos, and
 etc. Welcome aboard.
 
+If you are willing to add new words to the wordlist, please
+[read this](https://github.com/Theldus/sourcery/blob/master/dict/wordlist/README.md)
+before submitting a PR =).
+
 ## License and Authors
 Sourcery is licensed under MIT License. Written by Davidson Francis and
 (hopefully) other
