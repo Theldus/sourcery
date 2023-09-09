@@ -1,28 +1,42 @@
 README
 ------
-The file rev_wordlist.txt was based from scripts/spelling.txt from the
-Linux kernel, which has GPL-2.0 license. Therefore, all files derived
-from it are also GPL-2.0, namely: rev_wordlist.c and rev_hash_wordlist.c.
+The file rev_wordlist.txt contains words from:
 
-If you want to use Sourcery in something gpl-incompatible, please compile
-_without_ reverse checking support, i.e. without: "make CHECK=reverse".
-Sourcery by default _does not_ use reverse checking.
+a) Linux kernel
+Based from scripts/spelling.txt from the which has GPL-2.0 license.
+Therefore, all files derived from it are also GPL-2.0, namely:
+rev_wordlist.c and rev_hash_wordlist.c.
 
-A careful eye should note that license header has been removed, since
-gen.c does not support comments on parsing. This README serves as a
-substitute for this and also as an alert to the implications of the
-license.
+b) codespell/Wikipedia
+It also contains words from the codespell project (another
+spell-checker, made in Python). The words in it were derived
+from the English Wikipedia and are licensed: CC BY-SA 3.0.
 
-If this approach is not correct or appropriate, please let me know.
+---
 
-The original spelling.txt header follows below:
+Please note that each source has its specific license, and if you
+want to use Sourcery with rev_wordlist.txt, you need to bear them
+in mind!, since each of them might have specific limitations and
+requirements.
 
-# Originally from Debian's Lintian tool. Various false positives have been
-# removed, and various additions have been made as they've been discovered
-# in the kernel source.
-#
-# License: GPLv2
-#
-# The format of each line is:
-# mistake||correction
-#
+If these licenses are incompatible with your use-case, please do
+a normal build, without reverse check, as in:
+  $ make clean
+  $ make
+
+
+Note:
+If you don't want me to use the above wordlists, please contact me
+and I'll revert the commits.
+
+
+Resource links:
+- GPL-2.0: https://www.gnu.org/licenses/old-licenses/gpl-2.0.html.en
+
+- CC-BY SA 3.0: https://creativecommons.org/licenses/by-sa/3.0/
+
+- scripts/spelling.txt: https://github.com/torvalds/linux/blob/master
+/scripts/spelling.txt
+
+- dictionary.txt: https://github.com/codespell-project/codespell/blob
+/master/codespell_lib/data/dictionary.txt
