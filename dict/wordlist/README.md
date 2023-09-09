@@ -110,5 +110,6 @@ PRs/commits to make it functional. Please also list the license used by the word
 if any.
 
 ---
-If you don't want to go through all that, just send a message to issue #1 pointing
-out the words you want to add and the license of them (if any).
+If you don't want to go through all that, just send a message to issue
+[#1](https://github.com/Theldus/sourcery/issues/1) pointing out the words you want to
+add and the license of them (if any).
