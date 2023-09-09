@@ -87,9 +87,21 @@ static const char* next_word(const char **start, const char *end)
 
 	w_start = p;
 
-	/* SKip word characters. */
-	while (p <= end && isalpha(*p))
+	/*
+	 * Skip word characters.
+	 *
+	 * Some words can have ', _ and - as part of the words,
+	 * so we should consider this too, instead of stopping
+	 * in the middle of the word.
+	 */
+	while (p <= end &&
+			(isalpha(*p) ||
+				((*p == '-' || *p == '_' || *p == '\'') &&
+					(p > *start && isalpha(p[-1]))  )
+			))
+	{
 		p++;
+	}
 
 	*start = p;
 	return (w_start);
